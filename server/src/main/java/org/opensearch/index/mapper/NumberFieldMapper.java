@@ -35,6 +35,8 @@ package org.opensearch.index.mapper;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.exc.InputCoercionException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FloatPoint;
@@ -104,6 +106,8 @@ public class NumberFieldMapper extends ParametrizedFieldMapper {
     private static NumberFieldMapper toType(FieldMapper in) {
         return (NumberFieldMapper) in;
     }
+
+    private Logger logger = LogManager.getLogger(NumberFieldMapper.class);
 
     /**
      * Builder for the number field mappers
@@ -1784,7 +1788,8 @@ public class NumberFieldMapper extends ParametrizedFieldMapper {
             try {
                 numericValue = fieldType().type.parse(parser, coerce.value());
             } catch (InputCoercionException | IllegalArgumentException | JsonParseException e) {
-                if (ignoreMalformed.value() && parser.currentToken().isValue()) {
+                logger.warn("ignore_malformed is: {} and currentToken(): {}", ignoreMalformed.value(), parser.currentToken());
+                if (ignoreMalformed.value() && parser.currentToken().isValue()) { // TODO investigate isValue type for arrays but START_OBJECT for objects
                     context.addIgnoredField(mappedFieldType.name());
                     return;
                 } else {
