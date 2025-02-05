@@ -266,6 +266,7 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
      */
     public void parse(ParseContext context) throws IOException {
         try {
+            System.out.println("FieldMapper " + context.parser().currentToken());
             parseCreateField(context); // TODO figure out parsecreatefield
         } catch (Exception e) {
             String valuePreview = "";

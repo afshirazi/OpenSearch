@@ -446,6 +446,7 @@ final class DocumentParser {
                 } else if (token == XContentParser.Token.START_OBJECT) {
                     parseObject(context, mapper, currentFieldName, paths);
                 } else if (token == XContentParser.Token.START_ARRAY) {
+                    System.out.println("Inside innerParseObject line 449" + context.parser().currentToken());
                     parseArray(context, mapper, currentFieldName, paths);
                 } else if (token == XContentParser.Token.VALUE_NULL) {
                     parseNullValue(context, mapper, currentFieldName, paths);
@@ -687,6 +688,7 @@ final class DocumentParser {
             if (token == XContentParser.Token.START_OBJECT) {
                 parseObject(context, mapper, lastFieldName, paths);
             } else if (token == XContentParser.Token.START_ARRAY) {
+                System.out.println("Inside parseNonDynamicArray line 691 " + parser.currentToken());
                 parseArray(context, mapper, lastFieldName, paths);
             } else if (token == XContentParser.Token.VALUE_NULL) {
                 parseNullValue(context, mapper, lastFieldName, paths);
