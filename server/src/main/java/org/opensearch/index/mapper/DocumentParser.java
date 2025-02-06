@@ -522,6 +522,7 @@ final class DocumentParser {
 
     private static void parseObjectOrField(ParseContext context, Mapper mapper) throws IOException {
         if (mapper instanceof ObjectMapper) {
+            System.out.println("Using ObjectMapper to parse " + context.parser().currentToken());
             parseObjectOrNested(context, (ObjectMapper) mapper);
         } else if (mapper instanceof FieldMapper) {
             FieldMapper fieldMapper = (FieldMapper) mapper;
@@ -536,14 +537,51 @@ final class DocumentParser {
         }
     }
 
+    private static void parseObjectWithNoObjectMapper(final ParseContext context, ObjectMapper mapper, String currentFieldName) throws IOException {
+        XContentParser parser = context.parser();
+        XContentParser.Token token;
+
+        final String[] paths = splitAndValidatePath(currentFieldName);
+        System.out.println("Inside parseObjectWithNoObjectMapper line 546 " + parser.currentToken());
+        while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
+            System.out.println("Inside parseObjectWithNoObjectMapper line 548 " + parser.currentToken());
+            if (token == XContentParser.Token.START_OBJECT) {
+                parseObject(context, mapper, currentFieldName, paths);
+            } else if (token == XContentParser.Token.START_ARRAY) {
+                parseArray(context, mapper, currentFieldName, paths);
+            } else if (token == XContentParser.Token.VALUE_NULL) {
+                parseNullValue(context, mapper, currentFieldName, paths);
+            } else if (token == XContentParser.Token.FIELD_NAME) {
+                //todo does there need to be something here?
+            } else if (token == null) {
+                throw new MapperParsingException(
+                    "object mapping for ["
+                        + mapper.name()
+                        + "] with array for ["
+                        + currentFieldName
+                        + "] tried to parse as array, but got EOF, is there a mismatch in types for the same field?"
+                );
+            } else {
+                assert token.isValue();
+                parseValue(context, mapper, currentFieldName, token, paths);
+            }
+        }
+    }
+
     private static void parseObject(final ParseContext context, ObjectMapper mapper, String currentFieldName, String[] paths)
         throws IOException {
         assert currentFieldName != null;
 
         Mapper objectMapper = getMapper(context, mapper, currentFieldName, paths);
-        if (objectMapper != null) {
+        System.out.println("DocmentParser:545 mapper = " + objectMapper.getClass());
+        System.out.println("DocmentParser:546 token " + context.parser().currentToken());
+        if (objectMapper != null && objectMapper instanceof ObjectMapper) {
             context.path().add(currentFieldName);
             parseObjectOrField(context, objectMapper);
+            context.path().remove();
+        } else if (objectMapper != null) {
+            context.path().add(currentFieldName);
+            parseObjectWithNoObjectMapper(context, mapper, currentFieldName);
             context.path().remove();
         } else {
             currentFieldName = paths[paths.length - 1];
@@ -598,6 +636,7 @@ final class DocumentParser {
                 if (parsesArrayValue(mapper)) {
                     parseObjectOrField(context, mapper);
                 } else {
+                    System.out.println("Inside parseArray line 601 " + context.parser().currentToken());
                     parseNonDynamicArray(context, parentMapper, lastFieldName, arrayFieldName);
                 }
             } else {
@@ -684,11 +723,12 @@ final class DocumentParser {
             );
         }
         final String[] paths = splitAndValidatePath(lastFieldName);
+        System.out.println("Inside parseNonDynamicArray line 688 " + parser.currentToken());
         while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
+            System.out.println("Inside parseNonDynamicArray line 690 " + parser.currentToken());
             if (token == XContentParser.Token.START_OBJECT) {
                 parseObject(context, mapper, lastFieldName, paths);
             } else if (token == XContentParser.Token.START_ARRAY) {
-                System.out.println("Inside parseNonDynamicArray line 691 " + parser.currentToken());
                 parseArray(context, mapper, lastFieldName, paths);
             } else if (token == XContentParser.Token.VALUE_NULL) {
                 parseNullValue(context, mapper, lastFieldName, paths);
@@ -1054,6 +1094,7 @@ final class DocumentParser {
 
         for (int i = 0; i < subfields.length - 1; ++i) {
             mapper = objectMapper.getMapper(subfields[i]);
+            System.out.println("Mapper is "+ mapper + " for field " + subfields[i]);
             if (mapper == null || (mapper instanceof ObjectMapper) == false) {
                 return null;
             }
